@@ -24,3 +24,4 @@ jobs:
         with:
           unityVersion: 6000.4.1f1
           testMode: playmode
+          license: personal
