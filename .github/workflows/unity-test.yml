@@ -3,30 +3,23 @@ name: Unity Test CI
 on:
   push:
     branches: [ "main" ]
-  pull_request:
 
 jobs:
   test:
     runs-on: ubuntu-latest
 
-    # 🔥 ĐẶT Ở ĐÂY (QUAN TRỌNG)
     env:
-      UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
-      UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
-      UNITY_SERIAL: ""
+      UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
 
     steps:
-    - name: Checkout
-      uses: actions/checkout@v3
+    - uses: actions/checkout@v3
 
-    - name: Cache Library
-      uses: actions/cache@v3
+    - uses: actions/cache@v3
       with:
         path: Library
         key: Library-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
 
-    - name: Run Unity Tests
-      uses: game-ci/unity-test-runner@v4
+    - uses: game-ci/unity-test-runner@v4
       with:
         unityVersion: 6000.4.1f1
         testMode: playmode
