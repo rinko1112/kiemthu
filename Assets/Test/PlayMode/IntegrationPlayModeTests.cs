@@ -3,15 +3,12 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.TestTools;
 using UnityEngine.SceneManagement;
-using System.Reflection;
 
 public class IntegrationPlayModeTests
 {
     private PlayerController player;
-    private Enemy enemy;
 
     [UnitySetUp]
-    [System.Obsolete]
     public IEnumerator KhoiTao()
     {
         yield return SceneManager.LoadSceneAsync("SampleScene");
@@ -26,57 +23,89 @@ public class IntegrationPlayModeTests
             ui.enabled = false;
         }
 
-        // ❌ KHÔNG disable LevelUpManager nữa
-        // để auto chọn stat chạy đúng
-
         player = Object.FindFirstObjectByType<PlayerController>();
-        enemy = Object.FindFirstObjectByType<Enemy>();
-
         Assert.IsNotNull(player);
-        Assert.IsNotNull(enemy);
 
         yield return null;
     }
 
     // =========================
-    // TC_INT_01 - Kill enemy (combat thật)
+    // TC_INT_01 - Kill enemy (flow thật)
     // =========================
     [UnityTest]
     public IEnumerator Test_KillEnemy()
     {
-        enemy.transform.position = player.transform.position + Vector3.right * 0.5f;
+        GameObject enemyPrefab = Resources.Load<GameObject>("Enemy");
+        Assert.IsNotNull(enemyPrefab, "Không tìm thấy Enemy prefab");
 
-        enemy.stats.currentHP = 1;
+        GameObject enemyObj = Object.Instantiate(
+            enemyPrefab,
+            player.transform.position + Vector3.right * 1f,
+            Quaternion.identity
+        );
 
-        var method = typeof(PlayerController)
-            .GetMethod("Attack", BindingFlags.NonPublic | BindingFlags.Instance);
+        Enemy enemy = enemyObj.GetComponent<Enemy>();
+        Assert.IsNotNull(enemy);
 
-        if (method == null)
-        {
-            Assert.Fail("Không tìm thấy Attack()");
-        }
+        yield return null; // 👉 đợi Start()
 
-        method.Invoke(player, null);
+        enemy.stats.currentHP = 2;
 
-        yield return new WaitForSeconds(0.5f);
+        // 👉 giả lập combat thật
+        enemy.TakeDamage(2);
 
-        Assert.LessOrEqual(enemy.stats.currentHP, 0);
+        // chờ chết (HP <= 0)
+        yield return WaitForCondition(
+            () => enemy != null && enemy.stats.currentHP <= 0,
+            2f
+        );
+
+        // chờ destroy (animation delay)
+        yield return WaitForCondition(
+            () => enemy == null,
+            3f
+        );
+
+        Assert.Pass();
     }
 
     // =========================
-    // TC_INT_02 - LevelUp flow (FIX CHUẨN)
+    // TC_INT_02 - LevelUp flow thật
     // =========================
     [UnityTest]
     public IEnumerator Test_LevelUp_Flow()
     {
-        int levelCu = player.level;
+        int oldLevel = player.level;
 
         player.currentExp = player.expToNextLevel;
+
         player.AddExp(0);
 
-        // 🔥 cho hệ thống auto chọn stat chạy
-        yield return new WaitForSeconds(1f);
+        yield return WaitForCondition(
+            () => player.level > oldLevel,
+            3f
+        );
 
-        Assert.Greater(player.level, levelCu);
+        Assert.Greater(player.level, oldLevel);
+    }
+
+    // =========================
+    // HELPER
+    // =========================
+    protected IEnumerator WaitForCondition(System.Func<bool> condition, float timeout = 3f)
+    {
+        float timer = 0f;
+
+        while (!condition())
+        {
+            if (timer >= timeout)
+            {
+                Assert.Fail("Timeout - Condition không đạt");
+                yield break;
+            }
+
+            timer += Time.deltaTime;
+            yield return null;
+        }
     }
 }

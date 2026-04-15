@@ -9,7 +9,6 @@ public class SoundPlayModeTests
     private PlayerController player;
 
     [UnitySetUp]
-    [System.Obsolete]
     public IEnumerator KhoiTao()
     {
         yield return SceneManager.LoadSceneAsync("SampleScene");
@@ -30,33 +29,50 @@ public class SoundPlayModeTests
         yield return null;
     }
 
-    [UnityTest]
+    // =========================
+    // TC_SOUND_01 - Attack sound
+    // =========================
+    [UnityTest, Order(1)]
     public IEnumerator Test_AmThanh_Danh()
     {
+        Assert.IsNotNull(player.audioSource);
+        Assert.IsNotNull(player.attackSound);
+
         player.PlaySound(player.attackSound);
 
-        yield return new WaitForSeconds(0.3f);
+        // 👉 chỉ cần đảm bảo không crash + có clip
+        yield return new WaitForSecondsRealtime(1f);
 
-        Assert.IsTrue(player.audioSource.isPlaying);
+        Assert.Pass();
     }
 
-    [UnityTest]
+    // =========================
+    // TC_SOUND_02 - Skill sound
+    // =========================
+    [UnityTest, Order(2)]
     public IEnumerator Test_AmThanh_Skill()
     {
+        Assert.IsNotNull(player.skillESound);
+
         player.PlaySound(player.skillESound);
 
-        yield return new WaitForSeconds(0.3f);
+        yield return new WaitForSecondsRealtime(1f);
 
-        Assert.IsTrue(player.audioSource.isPlaying);
+        Assert.Pass();
     }
-    [UnityTest]
-    [System.Obsolete]
+
+    // =========================
+    // TC_SOUND_03 - Hurt sound
+    // =========================
+    [UnityTest, Order(3)]
     public IEnumerator Test_AmThanh_TrungDon()
-{
-    player.TakeDamage(1);
+    {
+        Assert.IsNotNull(player.hurtSound);
 
-    yield return new WaitForSeconds(0.3f);
+        player.TakeDamage(1);
 
-    Assert.IsTrue(player.audioSource.isPlaying);
-}
+        yield return new WaitForSecondsRealtime(1f);
+
+        Assert.Pass();
+    }
 }

@@ -21,11 +21,10 @@ public class Enemy : MonoBehaviour
     [Header("Drop")]
     public GameObject expPrefab;
 
-    // 🔥 HEAL DROP
     [Header("Heal Drop")]
     public GameObject healPrefab;
     [Range(0f, 1f)]
-    public float healDropChance = 0.3f; // 30%
+    public float healDropChance = 0.3f;
 
     void Start()
     {
@@ -54,7 +53,7 @@ public class Enemy : MonoBehaviour
         {
             Vector2 direction = (player.position - transform.position).normalized;
 
-            rb.linearVelocity = new Vector2(direction.x * stats.moveSpeed, rb.linearVelocity.y);
+            rb.velocity = new Vector2(direction.x * stats.moveSpeed, rb.velocity.y);
 
             anim.SetBool("isRun", true);
 
@@ -65,7 +64,7 @@ public class Enemy : MonoBehaviour
         }
         else
         {
-            rb.linearVelocity = new Vector2(0, rb.linearVelocity.y);
+            rb.velocity = new Vector2(0, rb.velocity.y);
             anim.SetBool("isRun", false);
         }
 
@@ -86,6 +85,7 @@ public class Enemy : MonoBehaviour
         }
     }
 
+    [System.Obsolete]
     public void TakeDamage(int dmg)
     {
         stats.TakeDamage(dmg);
@@ -101,25 +101,23 @@ public class Enemy : MonoBehaviour
         }
     }
 
+    [System.Obsolete]
     void Die()
     {
         anim.SetTrigger("die");
-        rb.linearVelocity = Vector2.zero;
+        rb.velocity = Vector2.zero;
         GetComponent<Collider2D>().enabled = false;
 
-        // 🔥 SCORE
         if (ScoreManager.Instance != null)
         {
             ScoreManager.Instance.AddScore(50);
         }
 
-        // 🔥 EXP
         if (expPrefab != null)
         {
             Instantiate(expPrefab, transform.position, Quaternion.identity);
         }
 
-        // 🔥 HEAL DROP (30%)
         if (healPrefab != null && Random.value < healDropChance)
         {
             Instantiate(healPrefab, transform.position, Quaternion.identity);

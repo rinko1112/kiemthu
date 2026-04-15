@@ -8,10 +8,9 @@ using TMPro;
 public class UITestPlayModeTests
 {
     private PlayerController player;
-    private TextMeshProUGUI levelText;
+    private ExpBar expBar;
 
     [UnitySetUp]
-    [System.Obsolete]
     public IEnumerator KhoiTao()
     {
         yield return SceneManager.LoadSceneAsync("SampleScene");
@@ -26,65 +25,94 @@ public class UITestPlayModeTests
             ui.enabled = false;
         }
 
-        // ❌ KHÔNG disable LevelUpManager
-        // để giữ logic auto chọn stat
-
         player = Object.FindFirstObjectByType<PlayerController>();
         Assert.IsNotNull(player);
 
-        levelText = Object.FindFirstObjectByType<TextMeshProUGUI>();
+        expBar = player.expBar;
+        Assert.IsNotNull(expBar);
 
         yield return null;
     }
 
     // =========================
-    // TC_UI_01 - Level text cập nhật (theo level thật)
+    // TC_UI_01 - Level text cập nhật
     // =========================
-    [UnityTest]
+    [UnityTest, Order(1)]
     public IEnumerator Test_LevelText_CapNhat()
     {
-        if (levelText == null)
-            Assert.Ignore();
-
         int levelCu = player.level;
 
         player.currentExp = player.expToNextLevel;
         player.AddExp(0);
 
-        // 🔥 chờ auto level + UI update
-        yield return new WaitForSeconds(1f);
+        yield return WaitForCondition(
+            () => player.level > levelCu,
+            2f
+        );
+
+        // 👉 cho bạn nhìn UI
+        yield return new WaitForSecondsRealtime(2f);
 
         Assert.Greater(player.level, levelCu);
     }
 
     // =========================
-    // TC_UI_02 - HP giảm (logic thật)
+    // TC_UI_02 - HP giảm
     // =========================
-    [UnityTest]
-    [System.Obsolete]
+    [UnityTest, Order(2)]
     public IEnumerator Test_HP_Giam()
     {
         int hpCu = player.stats.currentHP;
 
         player.TakeDamage(2);
 
-        yield return null;
+        yield return WaitForCondition(
+            () => player.stats.currentHP < hpCu,
+            2f
+        );
+
+        yield return new WaitForSecondsRealtime(2f);
 
         Assert.Less(player.stats.currentHP, hpCu);
     }
 
     // =========================
-    // TC_UI_03 - EXP tăng (logic thật)
+    // TC_UI_03 - EXP tăng
     // =========================
-    [UnityTest]
+    [UnityTest, Order(3)]
     public IEnumerator Test_EXP_Tang()
     {
         int expCu = player.currentExp;
 
         player.AddExp(50);
 
-        yield return null;
+        yield return WaitForCondition(
+            () => player.currentExp > expCu,
+            2f
+        );
+
+        yield return new WaitForSecondsRealtime(2f);
 
         Assert.Greater(player.currentExp, expCu);
+    }
+
+    // =========================
+    // HELPER
+    // =========================
+    protected IEnumerator WaitForCondition(System.Func<bool> condition, float timeout = 3f)
+    {
+        float timer = 0f;
+
+        while (!condition())
+        {
+            if (timer >= timeout)
+            {
+                Assert.Fail("Timeout - UI không update");
+                yield break;
+            }
+
+            timer += Time.deltaTime;
+            yield return null;
+        }
     }
 }

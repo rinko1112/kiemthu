@@ -34,7 +34,6 @@ public class PlayerController : MonoBehaviour
     public float baseSkillCooldown = 5f;
     private float lastSkillETime;
 
-    // ===== 🔥 AUDIO =====
     [Header("Audio")]
     public AudioSource audioSource;
     public AudioClip attackSound;
@@ -53,6 +52,8 @@ public class PlayerController : MonoBehaviour
 
     public ExpBar expBar;
 
+    private GameResultUI cachedUI;
+
     void Start()
     {
         rb = GetComponent<Rigidbody2D>();
@@ -63,6 +64,8 @@ public class PlayerController : MonoBehaviour
 
         if (hpBar != null)
             hpBar.SetHP(stats.currentHP, stats.maxHP);
+
+        cachedUI = FindObjectOfType<GameResultUI>();
 
         if (expBar != null)
         {
@@ -97,7 +100,6 @@ public class PlayerController : MonoBehaviour
 
             anim.SetTrigger("attack");
 
-            // 🔥 SOUND
             PlaySound(attackSound);
 
             GameObject[] enemies = GameObject.FindGameObjectsWithTag("Enemy");
@@ -158,7 +160,6 @@ public class PlayerController : MonoBehaviour
 
         anim.SetTrigger("attack");
 
-        // 🔥 SOUND
         PlaySound(skillESound);
 
         GameObject[] enemies = GameObject.FindGameObjectsWithTag("Enemy");
@@ -195,7 +196,6 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    // ===== COOLDOWN SCALE =====
     float GetAttackCooldown()
     {
         float baseSpeed = 5f;
@@ -214,7 +214,6 @@ public class PlayerController : MonoBehaviour
         return Mathf.Clamp(cooldown, 1f, baseSkillCooldown);
     }
 
-    [System.Obsolete]
     public void TakeDamage(int dmg)
     {
         stats.TakeDamage(dmg);
@@ -224,7 +223,6 @@ public class PlayerController : MonoBehaviour
 
         anim.SetTrigger("hurt");
 
-        // 🔥 SOUND
         PlaySound(hurtSound);
 
         if (stats.currentHP <= 0)
@@ -233,40 +231,33 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    [System.Obsolete]
-void Die()
-{
-    anim.SetTrigger("die");
-
-    rb.linearVelocity = Vector2.zero;
-    GetComponent<Collider2D>().enabled = false;
-
-    this.enabled = false;
-
-    // 🔥 CHỜ ANIMATION XONG
-    StartCoroutine(HandleDeath());
-}
-
-    [System.Obsolete]
-    IEnumerator HandleDeath()
-{
-    // 👉 thời gian animation chết (sửa theo animation của bạn)
-    float dieAnimTime = 1.5f;
-
-    yield return new WaitForSeconds(dieAnimTime);
-
-    // 🔥 HIỆN LOSE SAU KHI ANIM XONG
-    GameResultUI ui = FindObjectOfType<GameResultUI>();
-    if (ui != null)
+    void Die()
     {
-        ui.ShowLose();
+        anim.SetTrigger("die");
+
+        rb.linearVelocity = Vector2.zero;
+        GetComponent<Collider2D>().enabled = false;
+
+        this.enabled = false;
+
+        StartCoroutine(HandleDeath());
     }
 
-    Destroy(gameObject);
-}
+    IEnumerator HandleDeath()
+    {
+        float dieAnimTime = 1.5f;
 
-    // ===== 🔥 AUDIO HELPER =====
-    public  void PlaySound(AudioClip clip)
+        yield return new WaitForSecondsRealtime(dieAnimTime);
+
+        if (cachedUI != null)
+        {
+            cachedUI.ShowLose();
+        }
+
+        Destroy(gameObject);
+    }
+
+    public void PlaySound(AudioClip clip)
     {
         if (audioSource != null && clip != null)
         {
@@ -301,8 +292,6 @@ void Die()
         level++;
 
         expToNextLevel += 50;
-
-        Debug.Log("LEVEL UP: " + level);
 
         if (expBar != null)
         {

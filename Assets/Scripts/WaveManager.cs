@@ -28,6 +28,7 @@ public class WaveManager : MonoBehaviour
     private List<GameObject> aliveEnemies = new List<GameObject>();
 
     private bool isSpawning = false;
+    private bool gameEnded = false;
 
     // ===== UI =====
     public WaveUI waveUI;
@@ -59,15 +60,17 @@ public class WaveManager : MonoBehaviour
                 Debug.Log("ALL WAVES CLEARED!");
             }
         }
-        // WIN CONDITION
-if (!isSpawning && aliveEnemies.Count == 0 && currentWave >= maxWave)
+        if (!isSpawning && aliveEnemies.Count == 0 && currentWave >= maxWave && !gameEnded)
 {
+    gameEnded = true;
+
     if (waveUI != null)
         waveUI.SetEnemyCount(0, totalEnemiesThisWave);
 
-    if (FindObjectOfType<GameResultUI>() != null)
+    GameResultUI ui = FindObjectOfType<GameResultUI>();
+    if (ui != null)
     {
-        FindObjectOfType<GameResultUI>().ShowWin();
+        ui.ShowWin();
     }
 }
     }

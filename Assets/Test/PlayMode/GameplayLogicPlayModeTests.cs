@@ -6,162 +6,202 @@ using UnityEngine.SceneManagement;
 
 public class GameplayLogicPlayModeTests
 {
-private PlayerController player;
+    private PlayerController player;
 
-[UnitySetUp]
-    [System.Obsolete]
+    [Header("Prefab")]
+    public GameObject enemyPrefab;
+
+    [UnitySetUp]
     public IEnumerator KhoiTao()
-{
-    yield return SceneManager.LoadSceneAsync("SampleScene");
-    yield return null;
-
-    GameUIManager ui = GameObject.FindObjectOfType<GameUIManager>();
-    if (ui != null)
     {
-        if (ui.menuPanel != null) ui.menuPanel.SetActive(false);
-        if (ui.pausePanel != null) ui.pausePanel.SetActive(false);
-        Time.timeScale = 1f;
-        ui.enabled = false;
+        yield return SceneManager.LoadSceneAsync("SampleScene");
+        yield return null;
+
+        GameUIManager ui = GameObject.FindObjectOfType<GameUIManager>();
+        if (ui != null)
+        {
+            if (ui.menuPanel != null) ui.menuPanel.SetActive(false);
+            if (ui.pausePanel != null) ui.pausePanel.SetActive(false);
+            Time.timeScale = 1f;
+            ui.enabled = false;
+        }
+
+        player = GameObject.FindObjectOfType<PlayerController>();
+        Assert.IsNotNull(player, "Không tìm thấy Player");
+
+        yield return null;
     }
 
-    player = GameObject.FindObjectOfType<PlayerController>();
-    Assert.IsNotNull(player);
-
-    yield return null;
-}
-
-// =========================
-// TC_GL_01 - Player nhận damage
-// =========================
-[UnityTest]
-    [System.Obsolete]
+    // =========================
+    // TC_GL_01 - Player nhận damage
+    // =========================
+    [UnityTest]
     public IEnumerator Test_Player_NhanDamage()
-{
-    int hpCu = player.stats.currentHP;
+    {
+        int hpCu = player.stats.currentHP;
 
-    player.TakeDamage(3);
+        player.TakeDamage(3);
 
-    yield return new WaitForSeconds(0.5f);
+        yield return WaitForCondition(
+            () => player.stats.currentHP == hpCu - 3,
+            2f
+        );
+    }
 
-    Assert.AreEqual(hpCu - 3, player.stats.currentHP);
-}
-
-// =========================
-// TC_GL_02 - Player chết
-// =========================
-[UnityTest]
-    [System.Obsolete]
+    // =========================
+    // TC_GL_02 - Player chết
+    // =========================
+    [UnityTest]
     public IEnumerator Test_Player_Chet()
-{
-    player.stats.currentHP = 1;
+    {
+        player.stats.currentHP = 1;
 
-    player.TakeDamage(2);
+        player.TakeDamage(2);
 
-    yield return new WaitForSeconds(0.5f);
+        yield return WaitForCondition(
+            () => player.stats.currentHP <= 0,
+            2f
+        );
+    }
 
-    Assert.LessOrEqual(player.stats.currentHP, 0);
-}
+    // =========================
+    // TC_GL_03 - Hồi máu
+    // =========================
+    [UnityTest]
+    public IEnumerator Test_Player_HoiMau()
+    {
+        player.stats.currentHP = 5;
 
-// =========================
-// TC_GL_03 - Hồi máu
-// =========================
-[UnityTest]
-public IEnumerator Test_Player_HoiMau()
-{
-    player.stats.currentHP = 5;
+        player.stats.Heal(10);
 
-    player.stats.Heal(10);
+        yield return null;
 
-    yield return null;
+        Assert.AreEqual(player.stats.maxHP, player.stats.currentHP);
+    }
 
-    Assert.AreEqual(player.stats.maxHP, player.stats.currentHP);
-}
-
-// =========================
-// TC_GL_04 - Enemy nhận damage (FIX CHUẨN)
-// =========================
-[UnityTest]
+    // =========================
+    // TC_GL_04 - Enemy nhận damage (DÙNG PREFAB)
+    // =========================
+    [UnityTest]
 public IEnumerator Test_Enemy_NhanDamage()
 {
-    GameObject enemyObj = new GameObject("Enemy");
+    GameObject enemyPrefab = Resources.Load<GameObject>("Enemy");
+    Assert.IsNotNull(enemyPrefab);
 
-    enemyObj.tag = "Enemy";
-    enemyObj.transform.position = player.transform.position + Vector3.right * 0.5f;
+    GameObject enemyObj = Object.Instantiate(
+        enemyPrefab,
+        player.transform.position + Vector3.right * 1f,
+        Quaternion.identity
+    );
 
-    enemyObj.AddComponent<Rigidbody2D>();
-    enemyObj.AddComponent<BoxCollider2D>();
+    Enemy enemy = enemyObj.GetComponent<Enemy>();
+    Assert.IsNotNull(enemy);
 
-    EnemyStats stats = enemyObj.AddComponent<EnemyStats>();
-    Enemy enemy = enemyObj.AddComponent<Enemy>();
+    yield return null; // 👉 ĐỢI Start()
 
-    enemy.stats = stats;
+    int hpCu = enemy.stats.currentHP;
 
-    stats.maxHP = 10;
-    stats.currentHP = 10;
+    enemy.TakeDamage(2);
 
-    // chờ system auto attack
-    yield return new WaitForSeconds(1f);
+    yield return WaitForCondition(
+        () => enemy != null && enemy.stats.currentHP < hpCu,
+        2f
+    );
 
-    Assert.Less(stats.currentHP, 10);
+    Assert.Less(enemy.stats.currentHP, hpCu);
+
+    Object.Destroy(enemyObj);
 }
 
-// =========================
-// TC_GL_05 - Enemy chết (FIX CHUẨN)
-// =========================
-[UnityTest]
+    // =========================
+    // TC_GL_05 - Enemy chết (DÙNG PREFAB)
+    // =========================
+    [UnityTest]
 public IEnumerator Test_Enemy_Chet()
 {
-    GameObject enemyObj = new GameObject("Enemy");
+    GameObject enemyPrefab = Resources.Load<GameObject>("Enemy");
+    Assert.IsNotNull(enemyPrefab);
 
-    enemyObj.tag = "Enemy";
-    enemyObj.transform.position = player.transform.position + Vector3.right * 0.5f;
+    GameObject enemyObj = Object.Instantiate(
+        enemyPrefab,
+        player.transform.position + Vector3.right * 1f,
+        Quaternion.identity
+    );
 
-    enemyObj.AddComponent<Rigidbody2D>();
-    enemyObj.AddComponent<BoxCollider2D>();
+    Enemy enemy = enemyObj.GetComponent<Enemy>();
+    Assert.IsNotNull(enemy);
 
-    EnemyStats stats = enemyObj.AddComponent<EnemyStats>();
-    Enemy enemy = enemyObj.AddComponent<Enemy>();
+    yield return null; // 👉 ĐỢI Start()
 
-    enemy.stats = stats;
+    enemy.stats.currentHP = 1;
 
-    stats.maxHP = 10;
-    stats.currentHP = 1;
+    enemy.TakeDamage(5);
 
-    yield return new WaitForSeconds(1f);
+    // 👉 CHỜ HP <= 0 (logic chết)
+    yield return WaitForCondition(
+        () => enemy != null && enemy.stats.currentHP <= 0,
+        2f
+    );
 
-    Assert.LessOrEqual(stats.currentHP, 0);
+    // 👉 CHỜ object bị destroy (animation + delay)
+    yield return WaitForCondition(
+        () => enemy == null,
+        3f
+    );
+
+    Assert.Pass();
 }
 
-// =========================
-// TC_GL_06 - Nhận EXP
-// =========================
-[UnityTest]
-public IEnumerator Test_Nhan_EXP()
-{
-    int expCu = player.currentExp;
+    // =========================
+    // TC_GL_06 - Nhận EXP
+    // =========================
+    [UnityTest]
+    public IEnumerator Test_Nhan_EXP()
+    {
+        int expCu = player.currentExp;
 
-    player.AddExp(50);
+        player.AddExp(50);
 
-    yield return null;
+        yield return null;
 
-    Assert.Greater(player.currentExp, expCu);
-}
+        Assert.Greater(player.currentExp, expCu);
+    }
 
-// =========================
-// TC_GL_07 - Level Up
-// =========================
-[UnityTest]
-public IEnumerator Test_LevelUp()
-{
-    int levelCu = player.level;
+    // =========================
+    // TC_GL_07 - Level Up
+    // =========================
+    [UnityTest]
+    public IEnumerator Test_LevelUp()
+    {
+        int levelCu = player.level;
 
-    player.currentExp = player.expToNextLevel;
+        player.currentExp = player.expToNextLevel;
 
-    player.AddExp(0);
+        player.AddExp(0);
 
-    yield return null;
+        yield return WaitForCondition(
+            () => player.level > levelCu,
+            2f
+        );
+    }
 
-    Assert.GreaterOrEqual(player.level, levelCu);
-}
+    // =========================
+    // HELPER
+    // =========================
+    protected IEnumerator WaitForCondition(System.Func<bool> condition, float timeout = 3f)
+    {
+        float timer = 0f;
 
+        while (!condition())
+        {
+            if (timer >= timeout)
+            {
+                Assert.Fail("Timeout - Condition không đạt");
+                yield break;
+            }
+
+            timer += Time.deltaTime;
+            yield return null;
+        }
+    }
 }
